@@ -31,13 +31,15 @@ use ratatui::{
     Frame, Terminal,
 };
 
+const APPNAME:&str = "cuervo";
+
 struct App {
-    show_popup: bool,
+    show_goto: bool,
 }
 
 impl App {
     const fn new() -> Self {
-        Self { show_popup: false }
+        Self { show_goto: false }
     }
 }
 
@@ -76,8 +78,10 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
         if let Event::Key(key) = event::read()? {
             if key.kind == KeyEventKind::Press {
                 match key.code {
+                    // Quit
                     KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Char('p') => app.show_popup = !app.show_popup,
+                    // Go to
+                    KeyCode::Char('g') => app.show_goto = !app.show_goto,
                     _ => {}
                 }
             }
@@ -88,24 +92,23 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
 fn ui(f: &mut Frame, app: &App) {
     let area = f.area();
 
-    let vertical = Layout::vertical([Constraint::Percentage(20), Constraint::Percentage(80)]);
-    let [instructions, content] = vertical.areas(area);
+    let vertical = Layout::vertical([Constraint::Percentage(100)]);
+    let [content] = vertical.areas(area);
 
-    let text = if app.show_popup {
-        "Press p to close the popup"
-    } else {
-        "Press p to show the popup"
-    };
-    let paragraph = Paragraph::new(text.slow_blink())
-        .centered()
-        .wrap(Wrap { trim: true });
-    f.render_widget(paragraph, instructions);
+    let text = format!("\nWelcome to {APPNAME}.\n\
+                        \n\
+                        Controls:\n\
+                        \x20\x20\x20\x20g: Go to URL.\n\
+                        \x20\x20\x20\x20q: Quit.");
 
-    let block = Block::bordered().title("Content").on_blue();
-    f.render_widget(block, content);
+    let intro = Paragraph::new(text)
+        //.centered()
+        .wrap(Wrap { trim: false });
 
-    if app.show_popup {
-        let block = Block::bordered().title("Popup");
+    f.render_widget(intro, content);
+
+    if app.show_goto {
+        let block = Block::bordered().title("Go to URL");
         let area = centered_rect(60, 20, area);
         f.render_widget(Clear, area); //this clears out the background
         f.render_widget(block, area);
