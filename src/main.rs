@@ -21,7 +21,7 @@ use std::{error::Error, io};
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     crossterm::{
-        event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
+        event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyEventKind},
         execute,
         terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     },
@@ -31,15 +31,21 @@ use ratatui::{
     Frame, Terminal,
 };
 
+use tui_input::backend::crossterm as input_backend;
+use tui_input::backend::crossterm::EventHandler as InputEventHandler;
+use tui_input::Input;
+
 const APPNAME:&str = "cuervo";
 
+enum UiState { Base, Goto(Input) }
+
 struct App {
-    show_goto: bool,
+    state: UiState,
 }
 
 impl App {
     const fn new() -> Self {
-        Self { show_goto: false }
+        Self { state: UiState::Base, }
     }
 }
 
@@ -75,17 +81,33 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
     loop {
         terminal.draw(|f| ui(f, &app))?;
 
-        if let Event::Key(key) = event::read()? {
-            if key.kind == KeyEventKind::Press {
-                match key.code {
-                    // Quit
-                    KeyCode::Char('q') => return Ok(()),
-                    // Go to
-                    KeyCode::Char('g') => app.show_goto = !app.show_goto,
-                    _ => {}
+        let ev = event::read()?;
+
+        match &mut app.state {
+            UiState::Base =>
+                if let Event::Key(key) = ev {
+                    if key.kind == KeyEventKind::Press {
+                        match key.code {
+                            // Quit
+                            KeyCode::Char('q') => return Ok(()),
+                            // Go to
+                            KeyCode::Char('g') => app.state = UiState::Goto("https://".into()),
+                            _ => {}
+                        }
+                    }
+                },
+            UiState::Goto(input) =>
+                if let Event::Key(key @ KeyEvent { code, .. }) = ev {
+                    match code {
+                        KeyCode::Esc | KeyCode::Enter => {
+                            app.state = UiState::Base;
+                        }
+                        _ => {
+                            input.handle_event(&Event::Key(key));
+                        }
+                    }
                 }
             }
-        }
     }
 }
 
@@ -107,11 +129,31 @@ fn ui(f: &mut Frame, app: &App) {
 
     f.render_widget(intro, content);
 
-    if app.show_goto {
+    if let UiState::Goto(input) = &app.state {
         let block = Block::bordered().title("Go to URL");
         let area = centered_rect(60, 20, area);
+        let area = Rect {height:3, ..area}; // Dont actually want relative height
+
+        let inner = block.inner(area);
+        let width = area.width.max(1) - 1;
+        let scroll_amount = input.visual_scroll(width as usize);
+        let input_widget = Paragraph::new(input.value())
+            .style(ratatui::style::Style::default())
+            .scroll((0, scroll_amount as u16));
+
         f.render_widget(Clear, area); //this clears out the background
         f.render_widget(block, area);
+
+        f.render_widget(input_widget, inner); //this clears out the background
+
+        f.set_cursor_position((
+                // Put cursor past the end of the input text
+                inner.x
+                    + ((input.visual_cursor()).max(scroll_amount) - scroll_amount) as u16
+                    + 0,
+                // Move one line down, from the border to the input line
+                inner.y,
+            ))
     }
 }
 

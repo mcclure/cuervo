@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 ratatui = "0.28.0"
+tui-input = "0.10.1"
