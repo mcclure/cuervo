@@ -21,7 +21,7 @@ use std::{error::Error, io};
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     crossterm::{
-        event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyEventKind},
+        event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
         execute,
         terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     },
@@ -97,14 +97,21 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                     }
                 },
             UiState::Goto(input) =>
-                if let Event::Key(key @ KeyEvent { code, .. }) = ev {
-                    match code {
-                        KeyCode::Esc | KeyCode::Enter => {
-                            app.state = UiState::Base;
-                        }
-                        _ => {
-                            input.handle_event(&Event::Key(key));
-                        }
+                if let Event::Key(key @ KeyEvent { code, modifiers, .. }) = ev {
+                    // Undocumented: CTRL-Q always quits
+                    let ctrl = modifiers.intersects(KeyModifiers::CONTROL);
+                    if code == KeyCode::Char('q') && ctrl {
+                        return Ok(());
+                    }
+                    let accept = code == KeyCode::Enter;
+                    let done = accept || 
+                        // Undocumented: ESC and CTRL-C exit input
+                        code == KeyCode::Esc || (code == KeyCode::Char('c') && ctrl);
+
+                    if done {
+                        app.state = UiState::Base;
+                    } else {
+                        input.handle_event(&Event::Key(key));
                     }
                 }
             }
