@@ -2,9 +2,12 @@
 name = "cuervo"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.80.1" # Some libraries require 1.80.1
 
 [dependencies]
 fluent = "0.16.1"
+# 2024-09-12 top of tree
+libservo = { git = "https://github.com/servo/servo", rev = "37ab4b98259d45c9efd3645ebc961ca518adb5c6" }
 ratatui = "0.28.0"
 sys-locale = "0.3.1"
 tui-input = "0.10.1"
