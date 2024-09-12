@@ -50,6 +50,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut strings = FluentBundle::new(vec![langid.clone()]);
         let rawstring = match langid.language.as_str() {
             "es" => include_str!("strings/es.ftl"),
+            "tok" => include_str!("strings/tok.ftl"),
             _ => include_str!("strings/en.ftl")
         };
         strings
