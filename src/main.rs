@@ -1,20 +1,5 @@
-//! # [Ratatui] Popup example
-//!
-//! The latest version of this example is available in the [examples] folder in the repository.
-//!
-//! Please note that the examples are designed to be run against the `main` branch of the Github
-//! repository. This means that you may not be able to compile with the latest release version on
-//! crates.io, or the one that you have installed locally.
-//!
-//! See the [examples readme] for more information on finding examples that match the version of the
-//! library you are using.
-//!
-//! [Ratatui]: https://github.com/ratatui-org/ratatui
-//! [examples]: https://github.com/ratatui-org/ratatui/blob/main/examples
-//! [examples readme]: https://github.com/ratatui-org/ratatui/blob/main/examples/README.md
-
-// See also https://github.com/joshka/tui-popup and
-// https://github.com/sephiroth74/tui-confirm-dialog
+// Text based web browser (experimental)
+// Based on Ratatui popup example
 
 use std::{error::Error, io};
 
@@ -31,21 +16,22 @@ use ratatui::{
     Frame, Terminal,
 };
 
-use tui_input::backend::crossterm as input_backend;
+use fluent::{FluentBundle, FluentValue, FluentResource, FluentArgs, FluentError};
+use unic_langid::LanguageIdentifier;
+
 use tui_input::backend::crossterm::EventHandler as InputEventHandler;
 use tui_input::Input;
-
-const APPNAME:&str = "cuervo";
 
 enum UiState { Base, Goto(Input) }
 
 struct App {
     state: UiState,
+    strings: FluentBundle<FluentResource>
 }
 
 impl App {
-    const fn new() -> Self {
-        Self { state: UiState::Base, }
+    const fn new(strings: FluentBundle<FluentResource>) -> Self {
+        Self { state: UiState::Base, strings }
     }
 }
 
@@ -57,8 +43,25 @@ fn main() -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
+    // Load strings
+    let locale = sys_locale::get_locale().unwrap_or("en-US".to_owned());
+    let langid: LanguageIdentifier = locale.parse().expect("Parsing failed");
+    let strings = {
+        let mut strings = FluentBundle::new(vec![langid.clone()]);
+        let rawstring = match langid.language.as_str() {
+            "es" => include_str!("strings/es.ftl"),
+            _ => include_str!("strings/en.ftl")
+        };
+        strings
+            .add_resource(
+                FluentResource::try_new(rawstring.to_string())
+                    .expect("Failed to parse an FTL string.")
+            ).expect("Failed to add FTL resources to the bundle.");
+        strings
+    };
+
     // create app and run it
-    let app = App::new();
+    let app = App::new(strings);
     let res = run_app(&mut terminal, app);
 
     // restore terminal
@@ -118,26 +121,32 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
     }
 }
 
+fn naive_fluent(strings: &FluentBundle<FluentResource>, key:&str) -> String {
+    let mut trash:Vec<FluentError> = Default::default();
+    strings.format_pattern(
+        strings.get_message(key).unwrap().value().unwrap(),
+        None,
+        &mut trash
+    ).to_string()
+}
+
 fn ui(f: &mut Frame, app: &App) {
     let area = f.area();
 
     let vertical = Layout::vertical([Constraint::Percentage(100)]);
     let [content] = vertical.areas(area);
 
-    let text = format!("\nWelcome to {APPNAME}.\n\
-                        \n\
-                        Controls:\n\
-                        \x20\x20\x20\x20g: Go to URL.\n\
-                        \x20\x20\x20\x20q: Quit.");
-
-    let intro = Paragraph::new(text)
+    let intro = {
+        let mut trash:Vec<FluentError> = Default::default();
+        Paragraph::new(naive_fluent(&app.strings, "welcome"))
+    }
         //.centered()
         .wrap(Wrap { trim: false });
 
     f.render_widget(intro, content);
 
     if let UiState::Goto(input) = &app.state {
-        let block = Block::bordered().title("Go to URL");
+        let block = Block::bordered().title(naive_fluent(&app.strings, "goto"));
         let area = centered_rect(60, 20, area);
         let area = Rect {height:3, ..area}; // Dont actually want relative height
 
