@@ -1,10 +1,12 @@
-appname = Cuervo
+appname = ilo Cuervo
 
-goto = Tawa URL
+_goto = tawa URL
+
+goto = o {_goto}
 
 welcome =
-    {"\u000A"}Kama pona tawa {appname}
+    {"\u000A"}o kama pona tawa {appname}
 
-    Elo:
-        g: {goto}.
-        q: Tawa weka.
+    ilo kepeken:
+        g: {_goto}.
+        q: tawa weka.

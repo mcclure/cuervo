@@ -1,11 +1,11 @@
 appname = cuervo
 
-goto = Va a URL
+goto = Ir a la URL
 
 welcome = 
-    {"\u000A"}Bienvenidos a {appname}
+    {"\u000A"}Bienvenide a {appname}
     
     Controles:
         g: {goto}.
-        q: Salida.
+        q: Salir.
 
