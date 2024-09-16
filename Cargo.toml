@@ -5,10 +5,14 @@ edition = "2021"
 rust-version = "1.80.1" # Some libraries require 1.80.1
 
 [dependencies]
+euclid = "0.22.11"
 fluent = "0.16.1"
 # 2024-09-12 top of tree
 libservo = { git = "https://github.com/servo/servo", rev = "37ab4b98259d45c9efd3645ebc961ca518adb5c6" }
 ratatui = "0.28.0"
+servo_net = { git = "https://github.com/servo/servo", rev = "37ab4b98259d45c9efd3645ebc961ca518adb5c6", package="net" }
+servo_webxr = { git = "https://github.com/servo/webxr", package="webxr" }
+surfman = "0.9.8"
 sys-locale = "0.3.1"
 tui-input = "0.10.1"
 unic-langid = "0.9.5"

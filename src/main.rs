@@ -1,7 +1,11 @@
 // Text based web browser (experimental)
 // Based on Ratatui popup example
 
+mod glue;
+
 use std::{error::Error, io};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use ratatui::{
     backend::{Backend, CrosstermBackend},
@@ -19,21 +23,86 @@ use ratatui::{
 use fluent::{FluentBundle, FluentValue, FluentResource, FluentArgs, FluentError};
 use unic_langid::LanguageIdentifier;
 
+use servo::embedder_traits::{EventLoopWaker, EmbedderMsg, EmbedderProxy};
+use servo::compositing::windowing::{EmbedderEvent, EmbedderMethods};
+use servo::webrender_traits::RenderingContext;
+use servo_net::protocols::ProtocolRegistry;
+use surfman::{Connection, Context, Device, SurfaceType};
+
 use tui_input::backend::crossterm::EventHandler as InputEventHandler;
 use tui_input::Input;
+
+const VERSION:&str = "cuervo 0.1b"; // Not localized
 
 enum UiState { Base, Goto(Input) }
 
 struct App {
     state: UiState,
-    strings: FluentBundle<FluentResource>
+    strings: FluentBundle<FluentResource>,
+    servo: servo::Servo<glue::WindowCallbacks>,
 }
 
 impl App {
-    const fn new(strings: FluentBundle<FluentResource>) -> Self {
-        Self { state: UiState::Base, strings }
+    const fn new(strings: FluentBundle<FluentResource>, servo: servo::Servo<glue::WindowCallbacks>) -> Self {
+        Self { state: UiState::Base, strings, servo }
     }
 }
+
+// Handle event loop messages
+struct Waker { // TODO
+}
+
+impl EventLoopWaker for Waker {
+    // Required methods
+    fn clone_box(&self) -> Box<dyn EventLoopWaker> {
+        Box::new(Waker {})
+    }
+    fn wake(&self) {
+    }
+}
+
+// Handle messages from glue.rs
+struct HostHandler {
+}
+
+impl glue::HostTrait for HostHandler {
+    fn on_animating_changed(&self, _animating: bool) {
+    }
+}
+
+struct EmbedHandler {
+    event_loop_waker: Box<dyn EventLoopWaker>,
+}
+
+impl EmbedHandler {
+    pub fn new(event_loop_waker: Box<dyn EventLoopWaker>) -> EmbedHandler {
+        EmbedHandler { event_loop_waker }
+    }
+}
+
+impl EmbedderMethods for EmbedHandler {
+    fn create_event_loop_waker(&mut self) -> Box<dyn EventLoopWaker> {
+        self.event_loop_waker.clone()
+    }
+
+    fn register_webxr(&mut self, _xr: &mut servo_webxr::MainThreadRegistry,
+        _embedder_proxy: EmbedderProxy,
+    ) {
+        // XR support not planned
+    }
+
+    fn get_protocol_handlers(&self) -> ProtocolRegistry {
+        let mut registry = ProtocolRegistry::default();
+        // TODO support 
+//        registry.register("servo", servo_handler::ServoProtocolHander::default());
+        registry
+    }
+
+    fn get_version_string(&self) -> Option<String> {
+        Some(VERSION.into())
+    }
+}
+
 
 fn main() -> Result<(), Box<dyn Error>> {
     // setup terminal
@@ -62,7 +131,37 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     // create app and run it
-    let app = App::new(strings);
+    let app = {
+        let waker = Box::new(Waker{});
+        let embed_handler = Box::new(EmbedHandler::new(waker));
+        let size = terminal.size().unwrap();
+
+        let connection = Connection::new().expect("Failed to create connection");
+        let adapter = connection
+            .create_software_adapter()
+            .expect("Failed to create adapter");
+
+        // FIXME A rendering context is required, but why?
+        let surface_type = SurfaceType::Generic { size: euclid::Size2D::new(1 as i32, 1 as i32) };
+        let rendering_context = RenderingContext::create(&connection, &adapter, surface_type)
+            .expect("Failed to create WR surfman");
+
+        let window = glue::WindowCallbacks::new(
+            Box::new(HostHandler {}),
+            RefCell::new(glue::Coordinates::new(0, 0, size.width as i32, size.height as i32, 1, 1)), // TODO update on resize // FIXME 1x1 framebuffer?
+            1.0/20.0, // TODO pick number less arbitrarily
+            rendering_context
+        );
+
+        let servo = servo::Servo::new(
+            embed_handler,
+            Rc::new(window),
+            Some("desktop".into()),
+            servo::compositing::CompositeTarget::Window,
+        );
+
+        App::new(strings, servo.servo)
+    };
     let res = run_app(&mut terminal, app);
 
     // restore terminal
@@ -82,7 +181,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
-    loop {
+    'run: loop {
         terminal.draw(|f| ui(f, &app))?;
 
         let ev = event::read()?;
@@ -93,7 +192,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                     if key.kind == KeyEventKind::Press {
                         match key.code {
                             // Quit
-                            KeyCode::Char('q') => return Ok(()),
+                            KeyCode::Char('q') => break 'run,
                             // Go to
                             KeyCode::Char('g') => app.state = UiState::Goto("https://".into()),
                             _ => {}
@@ -105,7 +204,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                     // Undocumented: CTRL-Q always quits
                     let ctrl = modifiers.intersects(KeyModifiers::CONTROL);
                     if code == KeyCode::Char('q') && ctrl {
-                        return Ok(());
+                        break 'run;
                     }
                     let accept = code == KeyCode::Enter;
                     let done = accept || 
@@ -120,6 +219,24 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                 }
             }
     }
+
+
+    app.servo.handle_events(vec![EmbedderEvent::Quit]);
+
+    'drain: loop {
+        for (browser_id, event) in app.servo.get_events() {
+            //println!("{browser_id:?}, {event:?}");
+            if let EmbedderMsg::Shutdown = event {
+                break 'drain;
+            }
+        }
+
+        // TODO: Sleep 1ms
+        app.servo.handle_events(vec![]);
+    }
+    app.servo.deinit();
+
+    Ok(())
 }
 
 fn naive_fluent(strings: &FluentBundle<FluentResource>, key:&str) -> String {

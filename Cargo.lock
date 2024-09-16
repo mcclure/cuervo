@@ -951,12 +951,16 @@ dependencies = [
 name = "cuervo"
 version = "0.1.0"
 dependencies = [
+ "euclid",
  "fluent",
  "libservo",
+ "net",
  "ratatui",
+ "surfman",
  "sys-locale",
  "tui-input",
  "unic-langid",
+ "webxr",
 ]
 
 [[package]]
