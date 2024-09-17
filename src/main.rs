@@ -39,12 +39,13 @@ enum UiState { Base, Goto(Input) }
 struct App {
     state: UiState,
     strings: FluentBundle<FluentResource>,
+    browser_id: servo::TopLevelBrowsingContextId,
     servo: servo::Servo<glue::WindowCallbacks>,
 }
 
 impl App {
-    const fn new(strings: FluentBundle<FluentResource>, servo: servo::Servo<glue::WindowCallbacks>) -> Self {
-        Self { state: UiState::Base, strings, servo }
+    const fn new(strings: FluentBundle<FluentResource>, browser_id: servo::TopLevelBrowsingContextId, servo: servo::Servo<glue::WindowCallbacks>) -> Self {
+        Self { state: UiState::Base, strings, browser_id, servo }
     }
 }
 
@@ -160,7 +161,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             servo::compositing::CompositeTarget::Window,
         );
 
-        App::new(strings, servo.servo)
+        App::new(strings, servo.browser_id, servo.servo)
     };
     let res = run_app(&mut terminal, app);
 
@@ -212,6 +213,12 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                         code == KeyCode::Esc || (code == KeyCode::Char('c') && ctrl);
 
                     if done {
+                        if accept {
+                            // FIXME save the url // FIXME handle bad url // FIXME reuse views
+                            let url = servo::servo_url::ServoUrl::parse(input.value()).expect("Not a real url");
+                            app.servo.handle_events(vec![EmbedderEvent::Quit, EmbedderEvent::NewWebView(url, app.browser_id)]);
+                        }
+
                         app.state = UiState::Base;
                     } else {
                         input.handle_event(&Event::Key(key));
@@ -219,7 +226,6 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                 }
             }
     }
-
 
     app.servo.handle_events(vec![EmbedderEvent::Quit]);
 
