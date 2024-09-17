@@ -25,6 +25,7 @@ use unic_langid::LanguageIdentifier;
 
 use servo::embedder_traits::{EventLoopWaker, EmbedderMsg, EmbedderProxy};
 use servo::compositing::windowing::{EmbedderEvent, EmbedderMethods};
+use servo::servo_url::ServoUrl;
 use servo::webrender_traits::RenderingContext;
 use servo_net::protocols::ProtocolRegistry;
 use surfman::{Connection, Context, Device, SurfaceType};
@@ -36,16 +37,39 @@ const VERSION:&str = "cuervo 0.1b"; // Not localized
 
 enum UiState { Base, Goto(Input) }
 
+enum BarState { None, UrlParse(String), UrlLoading }
+
+#[cfg(feature = "debug_mode")]
+const DEBUG_DISPLAY_FRESH:std::time::Duration = std::time::Duration::from_millis(100);
+
+#[cfg(feature = "debug_mode")]
+fn debug_display_reset() -> Option<std::time::Instant> { Some(std::time::Instant::now() + DEBUG_DISPLAY_FRESH) }
+
+#[cfg(feature = "debug_mode")]
+#[derive(Default)]
+struct DebugMode {
+    queue: std::collections::VecDeque<String>, // Messages to display
+    flip: Option<std::time::Instant>, // Remaining ticks
+}
+
 struct App {
     state: UiState,
+    bar_state: BarState,
     strings: FluentBundle<FluentResource>,
     browser_id: servo::TopLevelBrowsingContextId,
     servo: servo::Servo<glue::WindowCallbacks>,
+    #[cfg(feature = "debug_mode")]
+    debug_display: Option<DebugMode>, // If non-None do debug
 }
 
 impl App {
     const fn new(strings: FluentBundle<FluentResource>, browser_id: servo::TopLevelBrowsingContextId, servo: servo::Servo<glue::WindowCallbacks>) -> Self {
-        Self { state: UiState::Base, strings, browser_id, servo }
+        Self {
+            state: UiState::Base, bar_state:BarState::None, strings, browser_id, servo,
+
+            #[cfg(feature = "debug_mode")]
+            debug_display:None
+        }
     }
 }
 
@@ -104,7 +128,7 @@ impl EmbedderMethods for EmbedHandler {
     }
 }
 
-
+// INITIALIZE
 fn main() -> Result<(), Box<dyn Error>> {
     // setup terminal
     enable_raw_mode()?;
@@ -181,21 +205,37 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+// HANDLE EVENTS
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     'run: loop {
+        // Kick to draw
         terminal.draw(|f| ui(f, &app))?;
 
-        let ev = event::read()?;
+        let ev = event::read()?; // FIXME: No good, must pump events
+        let mut sent_event = false;
 
+        // Handle events
         match &mut app.state {
             UiState::Base =>
-                if let Event::Key(key) = ev {
+                if let Event::Key(key @ KeyEvent { code, modifiers, .. }) = ev {
                     if key.kind == KeyEventKind::Press {
                         match key.code {
                             // Quit
                             KeyCode::Char('q') => break 'run,
                             // Go to
                             KeyCode::Char('g') => app.state = UiState::Goto("https://".into()),
+                            
+                            // Debug mode?!
+                            #[cfg(feature = "debug_mode")]
+                            KeyCode::Char('p') => if modifiers.contains(KeyModifiers::CONTROL) {
+                                app.debug_display = if app.debug_display.is_none() {
+                                    let mut d = DebugMode::default();
+                                    d.flip = Some(std::time::Instant::now() + DEBUG_DISPLAY_FRESH*2);
+                                    d.queue.push_back("Debug display entered (CTRL-P to revert)".to_string()); // Not localized
+                                    Some(d)
+                                } else { None };
+                            },
+
                             _ => {}
                         }
                     }
@@ -203,20 +243,22 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
             UiState::Goto(input) =>
                 if let Event::Key(key @ KeyEvent { code, modifiers, .. }) = ev {
                     // Undocumented: CTRL-Q always quits
+                    let press = key.kind == KeyEventKind::Press;
                     let ctrl = modifiers.intersects(KeyModifiers::CONTROL);
-                    if code == KeyCode::Char('q') && ctrl {
+                    if press && code == KeyCode::Char('q') && ctrl {
                         break 'run;
                     }
                     let accept = code == KeyCode::Enter;
                     let done = accept || 
                         // Undocumented: ESC and CTRL-C exit input
-                        code == KeyCode::Esc || (code == KeyCode::Char('c') && ctrl);
+                        (press && (code == KeyCode::Esc || (code == KeyCode::Char('c') && ctrl)));
 
                     if done {
                         if accept {
                             // FIXME save the url // FIXME handle bad url // FIXME reuse views
                             let url = servo::servo_url::ServoUrl::parse(input.value()).expect("Not a real url");
-                            app.servo.handle_events(vec![EmbedderEvent::Quit, EmbedderEvent::NewWebView(url, app.browser_id)]);
+                            sent_event = true;
+                            app.servo.handle_events(vec![EmbedderEvent::NewWebView(url, app.browser_id)]);
                         }
 
                         app.state = UiState::Base;
@@ -224,14 +266,43 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                         input.handle_event(&Event::Key(key));
                     }
                 }
+        }
+
+        // Rotate queue for debug display (if any)
+        #[cfg(feature = "debug_mode")]
+        if let Some(d) = &mut app.debug_display {
+            if let Some(flip) = d.flip {
+                if flip < std::time::Instant::now() {
+                    d.queue.pop_front();
+                    d.flip = if d.queue.is_empty() { None } else { debug_display_reset() }
+                }
             }
+        }
+
+        // Pump servo queue
+        if !sent_event {
+            // TODO: Sleep 1ms?
+            app.servo.handle_events(vec![]);
+
+            for (_browser_id, event) in app.servo.get_events() {
+                match event {
+                    _=>()
+                }
+
+                #[cfg(feature = "debug_mode")] // Show every event in debug display
+                if let Some(d) = &mut app.debug_display {
+                    if d.flip.is_none() { d.flip = debug_display_reset(); }
+                    d.queue.push_back(format!("{event:?}"));
+                }
+            }
+        }
     }
 
     app.servo.handle_events(vec![EmbedderEvent::Quit]);
 
     'drain: loop {
-        for (browser_id, event) in app.servo.get_events() {
-            //println!("{browser_id:?}, {event:?}");
+        for (_browser_id, event) in app.servo.get_events() {
+            //println!("{_browser_id:?}, {event:?}");
             if let EmbedderMsg::Shutdown = event {
                 break 'drain;
             }
@@ -254,16 +325,14 @@ fn naive_fluent(strings: &FluentBundle<FluentResource>, key:&str) -> String {
     ).to_string()
 }
 
+// DRAW
 fn ui(f: &mut Frame, app: &App) {
     let area = f.area();
 
     let vertical = Layout::vertical([Constraint::Percentage(100)]);
     let [content] = vertical.areas(area);
 
-    let intro = {
-        let mut trash:Vec<FluentError> = Default::default();
-        Paragraph::new(naive_fluent(&app.strings, "welcome"))
-    }
+    let intro = Paragraph::new(naive_fluent(&app.strings, "welcome"))
         //.centered()
         .wrap(Wrap { trim: false });
 
@@ -294,6 +363,18 @@ fn ui(f: &mut Frame, app: &App) {
                 // Move one line down, from the border to the input line
                 inner.y,
             ))
+    }
+
+    #[cfg(feature = "debug_mode")]
+    if let Some(d) = &app.debug_display {
+        if let Some(text) = d.queue.front() {
+            let text = format!("{text} ({})", d.queue.len());
+            let bar = Paragraph::new(text.clone());
+            let mut area = content;
+            area.y = area.height-1;
+            area.height=1;
+            f.render_widget(bar, area);
+        }
     }
 }
 

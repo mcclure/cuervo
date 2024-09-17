@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.80.1" # Some libraries require 1.80.1
 
+[features]
+default=["debug_mode"]
+debug_mode=[] # CTRL_SHIFT-D
+
 [dependencies]
 euclid = "0.22.11"
 fluent = "0.16.1"
