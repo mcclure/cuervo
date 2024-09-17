@@ -286,6 +286,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
 
             for (_browser_id, event) in app.servo.get_events() {
                 match event {
+                    EmbedderMsg::LoadComplete => {
+                        // TODO: Display lists I guess?
+                    },
                     _=>()
                 }
 
