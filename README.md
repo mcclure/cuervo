@@ -19,6 +19,9 @@ This software is known to work on Ubuntu Linux 24.04 built with Rust 1.81. On my
 	[patch.'https://github.com/servo/servo']
 	libservo = { path = '../other/servo/components/servo' }
 	servo_net = { path = '../other/servo/components/net', package="net" }
+	[patch.'https://github.com/mcclure/servo']
+	libservo = { path = '../other/servo/components/servo' }
+	servo_net = { path = '../other/servo/components/net', package="net" }
 
 	[env]
 	RUSTC_BOOTSTRAP = "crown,script,style_tests"

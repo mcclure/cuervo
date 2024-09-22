@@ -178,10 +178,14 @@ fn main() -> Result<(), Box<dyn Error>> {
             rendering_context
         );
 
+        let user_agent = servo::default_user_agent_string_for(servo::UserAgent::Desktop);
+        let mut cuervo_version_iter = VERSION.chars();
+        let cuervo_version = cuervo_version_iter.next().unwrap().to_uppercase().collect::<String>()+cuervo_version_iter.as_str();
+
         let servo = servo::Servo::new(
             embed_handler,
             Rc::new(window),
-            Some("desktop".into()),
+            Some(format!("{user_agent} {cuervo_version} (like w3m)"), ), // User agent
             servo::compositing::CompositeTarget::Window,
         );
 

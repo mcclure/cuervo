@@ -12,9 +12,9 @@ debug_mode=[] # CTRL_SHIFT-D
 euclid = "0.22.11"
 fluent = "0.16.1"
 # 2024-09-12 top of tree
-libservo = { git = "https://github.com/servo/servo", rev = "37ab4b98259d45c9efd3645ebc961ca518adb5c6" }
+libservo = { git = "https://github.com/mcclure/servo", rev = "189f9fccfef2cc28a0be8dc4f6d1935790e25f82" }
 ratatui = "0.28.0"
-servo_net = { git = "https://github.com/servo/servo", rev = "37ab4b98259d45c9efd3645ebc961ca518adb5c6", package="net" }
+servo_net = { git = "https://github.com/mcclure/servo", rev = "189f9fccfef2cc28a0be8dc4f6d1935790e25f82", package="net" }
 servo_webxr = { git = "https://github.com/servo/webxr", package="webxr" }
 surfman = "0.9.8"
 sys-locale = "0.3.1"
