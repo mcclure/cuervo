@@ -58,6 +58,7 @@ struct App {
     strings: FluentBundle<FluentResource>,
     browser_id: servo::TopLevelBrowsingContextId,
     servo: servo::Servo<glue::WindowCallbacks>,
+    page_display: Option<String>,
     #[cfg(feature = "debug_mode")]
     debug_display: Option<DebugMode>, // If non-None do debug
 }
@@ -65,7 +66,7 @@ struct App {
 impl App {
     const fn new(strings: FluentBundle<FluentResource>, browser_id: servo::TopLevelBrowsingContextId, servo: servo::Servo<glue::WindowCallbacks>) -> Self {
         Self {
-            state: UiState::Base, bar_state:BarState::None, strings, browser_id, servo,
+            state: UiState::Base, bar_state:BarState::None, strings, browser_id, servo, page_display:None,
 
             #[cfg(feature = "debug_mode")]
             debug_display:None
@@ -291,22 +292,17 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
             for (_browser_id, event) in app.servo.get_events() {
                 match &event {
                     EmbedderMsg::CuervoReportStrings(v) => {
-                        let mut whitespace = 0;
-                        eprintln!("*** TEXT NODES UPDATED:");
+                        let mut page_text:String = Default::default();
                         for s in v {
-                            if !s.is_empty() {
-                                if s.trim().is_empty() {
-                                    whitespace += 1;
-                                } else {
-                                    eprintln!("{}", s.trim_end());
-                                }
+                            if !s.is_empty() && !s.trim().is_empty() {
+                                page_text += s.trim_end();
+                                page_text += "\n";
                             }
                         }
-                        if whitespace > 0 {
-                            eprintln!("*** DONE ({whitespace} whitespace nodes omitted)");
-                        } else {
-                            eprintln!("*** DONE");
+                        if page_text.is_empty() {
+                            page_text = "(Page is empty.)".to_string();
                         }
+                        app.page_display = Some(page_text);
                     },
                     _=>()
                 }
@@ -354,7 +350,13 @@ fn ui(f: &mut Frame, app: &App) {
     let vertical = Layout::vertical([Constraint::Percentage(100)]);
     let [content] = vertical.areas(area);
 
-    let intro = Paragraph::new(naive_fluent(&app.strings, "welcome"))
+    let page_text = if let Some(s) = &app.page_display {
+        s.to_owned()
+    } else {
+        naive_fluent(&app.strings, "welcome")
+    };
+
+    let intro = Paragraph::new(page_text)
         //.centered()
         .wrap(Wrap { trim: false });
 
