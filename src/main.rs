@@ -289,9 +289,24 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
             app.servo.handle_events(vec![]);
 
             for (_browser_id, event) in app.servo.get_events() {
-                match event {
-                    EmbedderMsg::LoadComplete => {
-                        // TODO: Display lists I guess?
+                match &event {
+                    EmbedderMsg::CuervoReportStrings(v) => {
+                        let mut whitespace = 0;
+                        eprintln!("*** TEXT NODES UPDATED:");
+                        for s in v {
+                            if !s.is_empty() {
+                                if s.trim().is_empty() {
+                                    whitespace += 1;
+                                } else {
+                                    eprintln!("{}", s.trim_end());
+                                }
+                            }
+                        }
+                        if whitespace > 0 {
+                            eprintln!("*** DONE ({whitespace} whitespace nodes omitted)");
+                        } else {
+                            eprintln!("*** DONE");
+                        }
                     },
                     _=>()
                 }
