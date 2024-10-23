@@ -9,3 +9,4 @@ welcome =
         g: {goto}.
         q: Salir.
 
+empty_page = (No hay contenido.)

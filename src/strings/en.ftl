@@ -8,3 +8,5 @@ welcome =
     Controls:
         g: {goto}.
         q: Quit.
+
+empty_page = (Page is empty.)

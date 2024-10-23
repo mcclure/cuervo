@@ -10,3 +10,5 @@ welcome =
     ilo kepeken:
         g: {_goto}.
         q: tawa weka.
+
+empty_page = (ijo li lon ala.)

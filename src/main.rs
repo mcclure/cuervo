@@ -300,7 +300,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                             }
                         }
                         if page_text.is_empty() {
-                            page_text = "(Page is empty.)".to_string();
+                            page_text = naive_fluent(&app.strings, "empty_page");
                         }
                         app.page_display = Some(page_text);
                     },
