@@ -1025,6 +1025,7 @@ dependencies = [
  "libservo",
  "net",
  "ratatui",
+ "rustls",
  "surfman",
  "sys-locale",
  "tui-input",
@@ -4423,6 +4424,7 @@ checksum = "5065c3f250cbd332cd894be57c40fa52387247659b14a2d6041d121547903b1b"
 dependencies = [
  "log",
  "once_cell",
+ "ring",
  "rustls-pki-types",
  "rustls-webpki",
  "subtle",
