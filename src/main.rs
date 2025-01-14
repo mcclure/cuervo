@@ -132,6 +132,11 @@ impl EmbedderMethods for EmbedHandler {
 
 // INITIALIZE
 fn main() -> Result<(), Box<dyn Error>> {
+    // rustls crashes if we don't do this early (how early? could it go after UI draw?)
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Error initializing crypto provider");
+
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -169,7 +174,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .expect("Failed to create adapter");
 
         // FIXME A rendering context is required, but why?
-        let rendering_context = RenderingContext::create(&connection, &adapter, None) // or: Some(Size2D::new(1 as i32, 1 as i32))
+        let rendering_context = RenderingContext::create(&connection, &adapter, Some(euclid::Size2D::new(1 as i32, 1 as i32)))
             .expect("Failed to create WR surfman");
 
         let window = glue::WindowCallbacks::new(
