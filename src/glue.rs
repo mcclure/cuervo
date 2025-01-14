@@ -6,8 +6,9 @@
 use std::cell::RefCell;
 use servo::embedder_traits::{InputMethodType, MediaSessionPlaybackState, PromptResult};
 use servo::webrender_api::units::DeviceIntRect;
-use servo::euclid::{Point2D, Rect, Scale, Size2D};
-use servo::style_traits::DevicePixel;
+use servo::euclid::{Box2D, Point2D, Rect, Scale, Size2D};
+use servo::servo_geometry::DeviceIndependentPixel;
+use servo::webrender_api::units::DevicePixel;
 use servo::webrender_traits::RenderingContext;
 use servo::compositing::windowing::{
     AnimationState, EmbedderCoordinates, WindowMethods,
@@ -118,7 +119,6 @@ pub struct WindowCallbacks {
     host_callbacks: Box<dyn HostTrait>,
     coordinates: RefCell<Coordinates>,
     density: f32,
-    rendering_context: RenderingContext,
 }
 
 impl WindowCallbacks {
@@ -126,13 +126,11 @@ impl WindowCallbacks {
         host_callbacks: Box<dyn HostTrait>,
         coordinates: RefCell<Coordinates>,
         density: f32,
-        rendering_context: RenderingContext,
     ) -> Self {
         Self {
             host_callbacks,
             coordinates,
             density,
-            rendering_context,
         }
     }
 }
@@ -140,13 +138,19 @@ impl WindowCallbacks {
 impl WindowMethods for WindowCallbacks {
     fn get_coordinates(&self) -> EmbedderCoordinates {
         let coords = self.coordinates.borrow();
+
+        let scale_factor = Scale::new(self.density);
+        let screen_size = coords.viewport.size;
+        let screen_size = (screen_size.to_f32() / scale_factor).to_i32();
+        let window_rect = Box2D::from_origin_and_size(Point2D::zero(), screen_size);
+
         EmbedderCoordinates {
-            viewport: coords.viewport.to_box2d(),
+            hidpi_factor: scale_factor,
+            screen_size,
+            available_screen_size: screen_size, // FIXME: Maybe drop final line?
+            window_rect,
             framebuffer: coords.framebuffer,
-            window: (coords.viewport.size, Point2D::new(0, 0)),
-            screen: coords.viewport.size,
-            screen_avail: coords.viewport.size,
-            hidpi_factor: Scale::new(self.density),
+            viewport: coords.viewport.to_box2d(),
         }
     }
 
@@ -156,7 +160,7 @@ impl WindowMethods for WindowCallbacks {
             .on_animating_changed(state == AnimationState::Animating);
     }
 
-    fn rendering_context(&self) -> RenderingContext {
-        self.rendering_context.clone()
-    }
+    // fn rendering_context(&self) -> RenderingContext {
+    //     self.rendering_context.clone()
+    // }
 }

@@ -1,5 +1,5 @@
 // Text based web browser (experimental)
-// Based on Ratatui popup example
+// Based on Ratatui popup example and servo/ports/servoshell
 
 mod glue;
 
@@ -23,8 +23,9 @@ use ratatui::{
 use fluent::{FluentBundle, FluentValue, FluentResource, FluentArgs, FluentError};
 use unic_langid::LanguageIdentifier;
 
-use servo::embedder_traits::{EventLoopWaker, EmbedderMsg, EmbedderProxy};
+use servo::base::id::WebViewId;
 use servo::compositing::windowing::{EmbedderEvent, EmbedderMethods};
+use servo::embedder_traits::{EventLoopWaker, EmbedderMsg, EmbedderProxy};
 use servo::servo_url::ServoUrl;
 use servo::webrender_traits::RenderingContext;
 use servo_net::protocols::ProtocolRegistry;
@@ -111,11 +112,11 @@ impl EmbedderMethods for EmbedHandler {
         self.event_loop_waker.clone()
     }
 
-    fn register_webxr(&mut self, _xr: &mut servo_webxr::MainThreadRegistry,
-        _embedder_proxy: EmbedderProxy,
-    ) {
-        // XR support not planned
-    }
+    // fn register_webxr(&mut self, _xr: &mut servo_webxr::MainThreadRegistry,
+    //     _embedder_proxy: EmbedderProxy,
+    // ) {
+    //     // XR support not planned
+    // }
 
     fn get_protocol_handlers(&self) -> ProtocolRegistry {
         let mut registry = ProtocolRegistry::default();
@@ -168,15 +169,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             .expect("Failed to create adapter");
 
         // FIXME A rendering context is required, but why?
-        let surface_type = SurfaceType::Generic { size: euclid::Size2D::new(1 as i32, 1 as i32) };
-        let rendering_context = RenderingContext::create(&connection, &adapter, surface_type)
+        let rendering_context = RenderingContext::create(&connection, &adapter, None) // or: Some(Size2D::new(1 as i32, 1 as i32))
             .expect("Failed to create WR surfman");
 
         let window = glue::WindowCallbacks::new(
             Box::new(HostHandler {}),
             RefCell::new(glue::Coordinates::new(0, 0, size.width as i32, size.height as i32, 1, 1)), // TODO update on resize // FIXME 1x1 framebuffer?
             1.0/20.0, // TODO pick number less arbitrarily
-            rendering_context
         );
 
         let user_agent = servo::default_user_agent_string_for(servo::UserAgent::Desktop);
@@ -184,13 +183,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         let cuervo_version = cuervo_version_iter.next().unwrap().to_uppercase().collect::<String>()+cuervo_version_iter.as_str();
 
         let servo = servo::Servo::new(
+            rendering_context,
             embed_handler,
             Rc::new(window),
             Some(format!("{user_agent} {cuervo_version} (like w3m)"), ), // User agent
             servo::compositing::CompositeTarget::Window,
         );
 
-        App::new(strings, servo.browser_id, servo.servo)
+        App::new(strings, WebViewId::new(), servo)
     };
     let res = run_app(&mut terminal, app);
 

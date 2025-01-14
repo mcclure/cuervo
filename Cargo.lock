@@ -496,7 +496,7 @@ dependencies = [
  "raqote",
  "servo_arc",
  "style",
- "surfman 0.9.8 (git+https://github.com/servo/surfman?rev=300789ddbda45c89e9165c31118bf1c4c07f89f6)",
+ "surfman",
  "unicode-script",
  "webrender",
  "webrender_api",
@@ -1015,7 +1015,7 @@ dependencies = [
  "libservo",
  "net",
  "ratatui",
- "surfman 0.9.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "surfman",
  "sys-locale",
  "tui-input",
  "unic-langid",
@@ -3178,7 +3178,7 @@ dependencies = [
  "servo_url",
  "style",
  "style_traits",
- "surfman 0.9.8 (git+https://github.com/servo/surfman?rev=300789ddbda45c89e9165c31118bf1c4c07f89f6)",
+ "surfman",
  "webgpu",
  "webrender",
  "webrender_api",
@@ -5318,34 +5318,6 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "surfman"
 version = "0.9.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb5f2d85c044920e1f2aaf5ad3795ae3b935025297271f2eadb021931571b4c3"
-dependencies = [
- "bitflags 2.7.0",
- "cfg_aliases",
- "cgl",
- "cocoa",
- "core-foundation",
- "core-graphics",
- "euclid",
- "gl_generator",
- "io-surface",
- "lazy_static",
- "libc",
- "log",
- "mach2",
- "metal 0.24.0",
- "objc",
- "raw-window-handle",
- "servo-display-link",
- "wayland-sys",
- "winapi",
- "wio",
-]
-
-[[package]]
-name = "surfman"
-version = "0.9.8"
 source = "git+https://github.com/servo/surfman?rev=300789ddbda45c89e9165c31118bf1c4c07f89f6#300789ddbda45c89e9165c31118bf1c4c07f89f6"
 dependencies = [
  "bitflags 2.7.0",
@@ -6264,7 +6236,7 @@ dependencies = [
  "log",
  "serde",
  "servo_geometry",
- "surfman 0.9.8 (git+https://github.com/servo/surfman?rev=300789ddbda45c89e9165c31118bf1c4c07f89f6)",
+ "surfman",
  "webrender_api",
 ]
 
@@ -6278,7 +6250,7 @@ dependencies = [
  "glow",
  "log",
  "raw-window-handle",
- "surfman 0.9.8 (git+https://github.com/servo/surfman?rev=300789ddbda45c89e9165c31118bf1c4c07f89f6)",
+ "surfman",
  "webxr-api",
 ]
 
