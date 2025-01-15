@@ -231,7 +231,6 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
         // Kick to draw
         terminal.draw(|f| ui(f, &app))?;
 
-        let mut sent_event = false;
         tokio::select! {
             Some(Ok(ev)) = events.next() => {
                 // Handle events
@@ -277,7 +276,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                                     if accept {
                                         // FIXME save the url // FIXME handle bad url // FIXME reuse views
                                         let url = servo::servo_url::ServoUrl::parse(input.value()).expect("Not a real url");
-                                        sent_event = true;
+
                                         app.servo.handle_events(vec![EmbedderEvent::NewWebView(url, app.browser_id)]);
                                     }
 
@@ -306,38 +305,36 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
             }
 
             // Pump servo queue
-            if !sent_event {
-                // TODO: Sleep 1ms?
-                app.servo.handle_events(vec![]);
+            app.servo.handle_events(vec![]);
 
-                for (_browser_id, event) in app.servo.get_events() {
-                    match &event {
-                        EmbedderMsg::CuervoReportStrings(v) => {
-                            let mut page_text:String = Default::default();
-                            for s in v {
-                                if !s.is_empty() && !s.trim().is_empty() {
-                                    page_text += s.trim_end();
-                                    page_text += "\n";
-                                }
+            for (_browser_id, event) in app.servo.get_events() {
+                match &event {
+                    EmbedderMsg::CuervoReportStrings(v) => {
+                        let mut page_text:String = Default::default();
+                        for s in v {
+                            if !s.is_empty() && !s.trim().is_empty() {
+                                page_text += s.trim_end();
+                                page_text += "\n";
                             }
-                            if page_text.is_empty() {
-                                page_text = naive_fluent(&app.strings, "empty_page");
-                            }
-                            app.page_display = Some(page_text);
-                        },
-                        _=>()
-                    }
+                        }
+                        if page_text.is_empty() {
+                            page_text = naive_fluent(&app.strings, "empty_page");
+                        }
+                        app.page_display = Some(page_text);
+                    },
+                    _=>()
+                }
 
-                    #[cfg(feature = "debug_mode")] // Show every event in debug display
-                    if let Some(d) = &mut app.debug_display {
-                        if d.flip.is_none() { d.flip = debug_display_reset(); }
-                        d.queue.push_back(format!("{event:?}"));
-                    }
+                #[cfg(feature = "debug_mode")] // Show every event in debug display
+                if let Some(d) = &mut app.debug_display {
+                    if d.flip.is_none() { d.flip = debug_display_reset(); }
+                    d.queue.push_back(format!("{event:?}"));
                 }
             }
         }
     }
 
+    // Must shut down servo thread before quit or it crashes
     app.servo.handle_events(vec![EmbedderEvent::Quit]);
 
     'drain: loop {
