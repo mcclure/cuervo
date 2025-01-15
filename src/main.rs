@@ -6,6 +6,7 @@ mod glue;
 use std::{error::Error, io};
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::Arc;
 use futures::StreamExt;
 
 use ratatui::{
@@ -59,6 +60,7 @@ struct App {
     bar_state: BarState,
     strings: FluentBundle<FluentResource>,
     browser_id: servo::TopLevelBrowsingContextId,
+    servo_wakeup: Arc<tokio::sync::Notify>,
     servo: servo::Servo<glue::WindowCallbacks>,
     page_display: Option<String>,
     #[cfg(feature = "debug_mode")]
@@ -66,9 +68,9 @@ struct App {
 }
 
 impl App {
-    const fn new(strings: FluentBundle<FluentResource>, browser_id: servo::TopLevelBrowsingContextId, servo: servo::Servo<glue::WindowCallbacks>) -> Self {
+    const fn new(strings: FluentBundle<FluentResource>, browser_id: servo::TopLevelBrowsingContextId, servo_wakeup: Arc<tokio::sync::Notify>, servo: servo::Servo<glue::WindowCallbacks>) -> Self {
         Self {
-            state: UiState::Base, bar_state:BarState::None, strings, browser_id, servo, page_display:None,
+            state: UiState::Base, bar_state:BarState::None, strings, browser_id, servo_wakeup, servo, page_display:None,
 
             #[cfg(feature = "debug_mode")]
             debug_display:None
@@ -78,14 +80,16 @@ impl App {
 
 // Handle event loop messages
 struct Waker { // TODO
+    wakeup_send: Arc<tokio::sync::Notify>
 }
 
 impl EventLoopWaker for Waker {
     // Required methods
     fn clone_box(&self) -> Box<dyn EventLoopWaker> {
-        Box::new(Waker {})
+        Box::new(Waker {wakeup_send: self.wakeup_send.clone()})
     }
     fn wake(&self) {
+        self.wakeup_send.notify_one();
     }
 }
 
@@ -166,7 +170,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // create app and run it
     let app = {
-        let waker = Box::new(Waker{});
+        let servo_wakeup = Arc::new(tokio::sync::Notify::new());
+        let waker = Box::new(Waker{wakeup_send:servo_wakeup.clone()});
         let embed_handler = Box::new(EmbedHandler::new(waker));
         let size = terminal.size().unwrap();
 
@@ -197,7 +202,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             servo::compositing::CompositeTarget::Window,
         );
 
-        App::new(strings, WebViewId::new(), servo)
+        App::new(strings, WebViewId::new(), servo_wakeup, servo)
     };
     let res = run_app(&mut terminal, app).await;
 
@@ -283,7 +288,8 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                             }
                         }
                 }
-            }
+            },
+            _ = app.servo_wakeup.notified() => {} // Don't do anything, just wake up
         }
 
         if !should_quit {
