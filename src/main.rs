@@ -6,6 +6,7 @@ mod glue;
 use std::{error::Error, io};
 use std::cell::RefCell;
 use std::rc::Rc;
+use futures::StreamExt;
 
 use ratatui::{
     backend::{Backend, CrosstermBackend},
@@ -131,7 +132,8 @@ impl EmbedderMethods for EmbedHandler {
 }
 
 // INITIALIZE
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     // rustls crashes if we don't do this early (how early? could it go after UI draw?)
     rustls::crypto::ring::default_provider()
         .install_default()
@@ -197,7 +199,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         App::new(strings, WebViewId::new(), servo)
     };
-    let res = run_app(&mut terminal, app);
+    let res = run_app(&mut terminal, app).await;
 
     // restore terminal
     disable_raw_mode()?;
@@ -216,106 +218,115 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 // HANDLE EVENTS
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
-    'run: loop {
+async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
+    let mut events = crossterm::event::EventStream::new();
+    let mut should_quit = false;
+
+    while !should_quit {
         // Kick to draw
         terminal.draw(|f| ui(f, &app))?;
 
-        let ev = event::read()?; // FIXME: No good, must pump events
         let mut sent_event = false;
+        tokio::select! {
+            Some(Ok(ev)) = events.next() => {
+                // Handle events
+                match &mut app.state {
+                    UiState::Base =>
+                        if let Event::Key(key @ KeyEvent { code, modifiers, .. }) = ev {
+                            if key.kind == KeyEventKind::Press {
+                                match key.code {
+                                    // Quit
+                                    KeyCode::Char('q') => should_quit = true,
+                                    // Go to
+                                    KeyCode::Char('g') => app.state = UiState::Goto("https://".into()),
 
-        // Handle events
-        match &mut app.state {
-            UiState::Base =>
-                if let Event::Key(key @ KeyEvent { code, modifiers, .. }) = ev {
-                    if key.kind == KeyEventKind::Press {
-                        match key.code {
-                            // Quit
-                            KeyCode::Char('q') => break 'run,
-                            // Go to
-                            KeyCode::Char('g') => app.state = UiState::Goto("https://".into()),
-                            
-                            // Debug mode?!
-                            #[cfg(feature = "debug_mode")]
-                            KeyCode::Char('p') => if modifiers.contains(KeyModifiers::CONTROL) {
-                                app.debug_display = if app.debug_display.is_none() {
-                                    let mut d = DebugMode::default();
-                                    d.flip = Some(std::time::Instant::now() + DEBUG_DISPLAY_FRESH*2);
-                                    d.queue.push_back("Debug display entered (CTRL-P to revert)".to_string()); // Not localized
-                                    Some(d)
-                                } else { None };
-                            },
+                                    // Debug mode?!
+                                    #[cfg(feature = "debug_mode")]
+                                    KeyCode::Char('p') => if modifiers.contains(KeyModifiers::CONTROL) {
+                                        app.debug_display = if app.debug_display.is_none() {
+                                            let mut d = DebugMode::default();
+                                            d.flip = Some(std::time::Instant::now() + DEBUG_DISPLAY_FRESH*2);
+                                            d.queue.push_back("Debug display entered (CTRL-P to revert)".to_string()); // Not localized
+                                            Some(d)
+                                        } else { None };
+                                    },
 
-                            _ => {}
+                                    _ => {}
+                                }
+                            }
+                        },
+                    UiState::Goto(input) =>
+                        if let Event::Key(key @ KeyEvent { code, modifiers, .. }) = ev {
+                            // Undocumented: CTRL-Q always quits
+                            let press = key.kind == KeyEventKind::Press;
+                            let ctrl = modifiers.intersects(KeyModifiers::CONTROL);
+                            if press && code == KeyCode::Char('q') && ctrl {
+                                should_quit = true;
+                            } else {
+                                let accept = code == KeyCode::Enter;
+                                let done = accept ||
+                                    // Undocumented: ESC and CTRL-C exit input
+                                    (press && (code == KeyCode::Esc || (code == KeyCode::Char('c') && ctrl)));
+
+                                if done {
+                                    if accept {
+                                        // FIXME save the url // FIXME handle bad url // FIXME reuse views
+                                        let url = servo::servo_url::ServoUrl::parse(input.value()).expect("Not a real url");
+                                        sent_event = true;
+                                        app.servo.handle_events(vec![EmbedderEvent::NewWebView(url, app.browser_id)]);
+                                    }
+
+                                    app.state = UiState::Base;
+                                } else {
+                                    input.handle_event(&Event::Key(key));
+                                }
+                            }
                         }
-                    }
-                },
-            UiState::Goto(input) =>
-                if let Event::Key(key @ KeyEvent { code, modifiers, .. }) = ev {
-                    // Undocumented: CTRL-Q always quits
-                    let press = key.kind == KeyEventKind::Press;
-                    let ctrl = modifiers.intersects(KeyModifiers::CONTROL);
-                    if press && code == KeyCode::Char('q') && ctrl {
-                        break 'run;
-                    }
-                    let accept = code == KeyCode::Enter;
-                    let done = accept || 
-                        // Undocumented: ESC and CTRL-C exit input
-                        (press && (code == KeyCode::Esc || (code == KeyCode::Char('c') && ctrl)));
-
-                    if done {
-                        if accept {
-                            // FIXME save the url // FIXME handle bad url // FIXME reuse views
-                            let url = servo::servo_url::ServoUrl::parse(input.value()).expect("Not a real url");
-                            sent_event = true;
-                            app.servo.handle_events(vec![EmbedderEvent::NewWebView(url, app.browser_id)]);
-                        }
-
-                        app.state = UiState::Base;
-                    } else {
-                        input.handle_event(&Event::Key(key));
-                    }
-                }
-        }
-
-        // Rotate queue for debug display (if any)
-        #[cfg(feature = "debug_mode")]
-        if let Some(d) = &mut app.debug_display {
-            if let Some(flip) = d.flip {
-                if flip < std::time::Instant::now() {
-                    d.queue.pop_front();
-                    d.flip = if d.queue.is_empty() { None } else { debug_display_reset() }
                 }
             }
         }
 
-        // Pump servo queue
-        if !sent_event {
-            // TODO: Sleep 1ms?
-            app.servo.handle_events(vec![]);
+        if !should_quit {
 
-            for (_browser_id, event) in app.servo.get_events() {
-                match &event {
-                    EmbedderMsg::CuervoReportStrings(v) => {
-                        let mut page_text:String = Default::default();
-                        for s in v {
-                            if !s.is_empty() && !s.trim().is_empty() {
-                                page_text += s.trim_end();
-                                page_text += "\n";
-                            }
-                        }
-                        if page_text.is_empty() {
-                            page_text = naive_fluent(&app.strings, "empty_page");
-                        }
-                        app.page_display = Some(page_text);
-                    },
-                    _=>()
+            // Rotate queue for debug display (if any)
+            #[cfg(feature = "debug_mode")]
+            if let Some(d) = &mut app.debug_display {
+                if let Some(flip) = d.flip {
+                    if flip < std::time::Instant::now() {
+                        d.queue.pop_front();
+                        d.flip = if d.queue.is_empty() { None } else { debug_display_reset() }
+                    }
                 }
+            }
 
-                #[cfg(feature = "debug_mode")] // Show every event in debug display
-                if let Some(d) = &mut app.debug_display {
-                    if d.flip.is_none() { d.flip = debug_display_reset(); }
-                    d.queue.push_back(format!("{event:?}"));
+            // Pump servo queue
+            if !sent_event {
+                // TODO: Sleep 1ms?
+                app.servo.handle_events(vec![]);
+
+                for (_browser_id, event) in app.servo.get_events() {
+                    match &event {
+                        EmbedderMsg::CuervoReportStrings(v) => {
+                            let mut page_text:String = Default::default();
+                            for s in v {
+                                if !s.is_empty() && !s.trim().is_empty() {
+                                    page_text += s.trim_end();
+                                    page_text += "\n";
+                                }
+                            }
+                            if page_text.is_empty() {
+                                page_text = naive_fluent(&app.strings, "empty_page");
+                            }
+                            app.page_display = Some(page_text);
+                        },
+                        _=>()
+                    }
+
+                    #[cfg(feature = "debug_mode")] // Show every event in debug display
+                    if let Some(d) = &mut app.debug_display {
+                        if d.flip.is_none() { d.flip = debug_display_reset(); }
+                        d.queue.push_back(format!("{event:?}"));
+                    }
                 }
             }
         }

@@ -9,15 +9,18 @@ default=["debug_mode"]
 debug_mode=[] # CTRL_SHIFT-D
 
 [dependencies]
+crossterm = { package = "crossterm", version = "0.28", features=["event-stream"] }
 euclid = "0.22.11"
 fluent = "0.16.1"
+futures = "0.3.30"
 # 2024-09-12 top of tree
 libservo = { git = "https://github.com/mcclure/servo", rev = "c471443afad3254499f5090f3612c32189bf11ea" }
-ratatui = "0.28.0"
+ratatui = { version = "0.28.0", features=["crossterm"] }
 rustls = { version = "0.23", default-features = false, features = ["logging", "std", "tls12", "ring"] }
 servo_net = { git = "https://github.com/mcclure/servo", rev = "c471443afad3254499f5090f3612c32189bf11ea", package="net" }
 servo_webxr = { git = "https://github.com/servo/webxr", package="webxr" }
 surfman = { git = "https://github.com/servo/surfman", rev = "300789ddbda45c89e9165c31118bf1c4c07f89f6", features = ["chains"] }
 sys-locale = "0.3.1"
+tokio = {version = "1.43.0", features = ["rt", "macros", "time", "rt-multi-thread"]}
 tui-input = "0.10.1"
 unic-langid = "0.9.5"
