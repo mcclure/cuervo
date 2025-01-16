@@ -43,7 +43,7 @@ enum UiState { Base, Goto(Input) }
 enum BarState { None, UrlParse(String), UrlLoading }
 
 #[cfg(feature = "debug_mode")]
-const DEBUG_DISPLAY_FRESH:std::time::Duration = std::time::Duration::from_millis(100);
+const DEBUG_DISPLAY_FRESH:std::time::Duration = std::time::Duration::from_millis(800);
 
 #[cfg(feature = "debug_mode")]
 fn debug_display_reset() -> Option<std::time::Instant> { Some(std::time::Instant::now() + DEBUG_DISPLAY_FRESH) }
@@ -53,6 +53,20 @@ fn debug_display_reset() -> Option<std::time::Instant> { Some(std::time::Instant
 struct DebugMode {
     queue: std::collections::VecDeque<String>, // Messages to display
     flip: Option<std::time::Instant>, // Remaining ticks
+}
+
+#[cfg(feature = "debug_mode")]
+impl DebugMode {
+    fn reset(&mut self, sleep: &mut std::pin::Pin<&mut tokio::time::Sleep>, multiplier:u32) { // 0 for "never"
+        if 0 == multiplier {
+            self.flip = None;
+            sleep.reset(tokio::time::Instant::far_future());
+        } else {
+            let time = tokio::time::Instant::now() + DEBUG_DISPLAY_FRESH*multiplier;
+            self.flip = Some(time);
+            sleep.reset(time);
+        }
+    }
 }
 
 struct App {
@@ -227,6 +241,10 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
     let mut events = crossterm::event::EventStream::new();
     let mut should_quit = false;
 
+    let debug_display_sleep = tokio::time::sleep_until(tokio::time::Instant::far_future());
+    #[cfg(feature = "debug_mode")]
+    tokio::pin!(debug_display_sleep);
+
     while !should_quit {
         // Kick to draw
         terminal.draw(|f| ui(f, &app))?;
@@ -249,7 +267,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                                     KeyCode::Char('p') => if modifiers.contains(KeyModifiers::CONTROL) {
                                         app.debug_display = if app.debug_display.is_none() {
                                             let mut d = DebugMode::default();
-                                            d.flip = Some(std::time::Instant::now() + DEBUG_DISPLAY_FRESH*2);
+                                            d.reset(&mut debug_display_sleep, 2);
                                             d.queue.push_back("Debug display entered (CTRL-P to revert)".to_string()); // Not localized
                                             Some(d)
                                         } else { None };
@@ -288,7 +306,8 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                         }
                 }
             },
-            _ = app.servo_wakeup.notified() => {} // Don't do anything, just wake up
+            _ = app.servo_wakeup.notified() => {}, // Don't do anything, just wake up
+            _ = &mut debug_display_sleep => {},
         }
 
         if !should_quit {
@@ -297,9 +316,10 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
             #[cfg(feature = "debug_mode")]
             if let Some(d) = &mut app.debug_display {
                 if let Some(flip) = d.flip {
+                    eprintln!("{flip:?} < {:?}", std::time::Instant::now());
                     if flip < std::time::Instant::now() {
                         d.queue.pop_front();
-                        d.flip = if d.queue.is_empty() { None } else { debug_display_reset() }
+                        d.reset(&mut debug_display_sleep, if d.queue.is_empty() { 0 } else { 1 });
                     }
                 }
             }
