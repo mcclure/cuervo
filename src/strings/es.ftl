@@ -16,4 +16,6 @@ empty_page = (No hay contenido.)
 # Personal pronoun bad
 bad_url = No se puede: No comprendo la URL
 
-loading = Cargando: {url}
+loading = Cargando: {$url_slug}
+
+quitting = Saliendo...

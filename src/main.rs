@@ -75,6 +75,7 @@ enum StatusStyle {
 struct App {
     state: UiState,
     bar_state: BarState,
+    should_quit: bool,
     strings: FluentBundle<FluentResource>,
     browser_id: servo::TopLevelBrowsingContextId,
     servo_wakeup: Arc<tokio::sync::Notify>,
@@ -91,7 +92,7 @@ struct App {
 impl App {
     const fn new(strings: FluentBundle<FluentResource>, browser_id: servo::TopLevelBrowsingContextId, servo_wakeup: Arc<tokio::sync::Notify>, servo: servo::Servo<glue::WindowCallbacks>) -> Self {
         Self {
-            state: UiState::Base, bar_state:BarState::None, strings, browser_id, servo_wakeup, servo, reset_page_text:true, page_scroll:0, page_display:None, status_display:None,
+            state: UiState::Base, bar_state:BarState::None, should_quit:false, strings, browser_id, servo_wakeup, servo, reset_page_text:true, page_scroll:0, page_display:None, status_display:None,
 
             #[cfg(feature = "debug_mode")]
             debug_display:None
@@ -246,13 +247,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
 // HANDLE EVENTS
 async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     let mut events = crossterm::event::EventStream::new();
-    let mut should_quit = false;
+    app.should_quit = false;
 
     let mut debug_display_timer = async_io::Timer::never();
 
-    while !should_quit {
+    loop {
         // Kick to draw
         terminal.draw(|f| ui(f, &app))?;
+
+        if app.should_quit { break; }
 
         tokio::select! {
             Some(Ok(ev)) = events.next() => {
@@ -265,7 +268,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                             if key.kind == KeyEventKind::Press {
                                 match key.code {
                                     // Quit
-                                    KeyCode::Char('q') => should_quit = true,
+                                    KeyCode::Char('q') => app.should_quit = true,
                                     // Go to
                                     KeyCode::Char('g') => app.state = UiState::Goto("https://".into()),
 
@@ -314,7 +317,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                             let press = key.kind == KeyEventKind::Press;
                             let ctrl = modifiers.intersects(KeyModifiers::CONTROL);
                             if press && code == KeyCode::Char('q') && ctrl {
-                                should_quit = true;
+                                app.should_quit = true;
                             } else {
                                 let accept = code == KeyCode::Enter;
                                 let done = accept ||
@@ -354,7 +357,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
             _ = &mut debug_display_timer => {},
         }
 
-        if !should_quit {
+        if !app.should_quit {
 
             // Rotate queue for debug display (if any)
             #[cfg(feature = "debug_mode")]
@@ -458,13 +461,16 @@ fn ui(f: &mut Frame, app: &App) {
         naive_fluent(&app.strings, "welcome")
     };
 
-    let intro = Paragraph::new(page_text)
+    let page = Paragraph::new(page_text)
         //.centered()
         .wrap(Wrap { trim: false })
         .scroll((app.page_scroll as u16, 0));
 
-    f.render_widget(intro, content);
-
+    {
+        let mut area = content;
+        if app.status_display.is_some() || app.should_quit { area.height -= 1; }
+        f.render_widget(page, area);
+    }
     if let UiState::Goto(input) = &app.state {
         let block = Block::bordered().title(naive_fluent(&app.strings, "goto"));
         let area = centered_rect(60, 20, area);
@@ -492,16 +498,21 @@ fn ui(f: &mut Frame, app: &App) {
             ))
     }
 
-    if let Some((style, text)) = &app.status_display {
-        let bar = Paragraph::new(text.clone());
-        let bar = bar.style(match style {
-            StatusStyle::Error => Style::default().fg(Color::LightRed).add_modifier(Modifier::REVERSED),
-            _ => Style::default().add_modifier(Modifier::REVERSED),
-        });
-        let mut area = content;
-        area.y = area.height-1;
-        area.height=1;
-        f.render_widget(bar, area);
+    {
+        // FIXME: Last-moment quit override kinda looks bad but if we take awhile to quit (currently common), it's needed
+        let status_display = if !app.should_quit { &app.status_display} else { &Some((StatusStyle::Info, naive_fluent(&app.strings, "quitting"))) };
+
+        if let Some((style, text)) = status_display {
+            let bar = Paragraph::new(text.clone());
+            let bar = bar.style(match style {
+                StatusStyle::Error => Style::default().fg(Color::LightRed).add_modifier(Modifier::REVERSED),
+                _ => Style::default().add_modifier(Modifier::REVERSED),
+            });
+            let mut area = content;
+            area.y = area.height-1;
+            area.height=1;
+            f.render_widget(bar, area);
+        }
     }
 
     #[cfg(feature = "debug_mode")]
