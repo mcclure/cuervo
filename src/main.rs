@@ -79,6 +79,7 @@ struct App {
     browser_id: servo::TopLevelBrowsingContextId,
     servo_wakeup: Arc<tokio::sync::Notify>,
     servo: servo::Servo<glue::WindowCallbacks>,
+    reset_page_text: bool,
     page_display: Option<String>,
     status_display: Option<(StatusStyle, String)>,
 
@@ -89,7 +90,7 @@ struct App {
 impl App {
     const fn new(strings: FluentBundle<FluentResource>, browser_id: servo::TopLevelBrowsingContextId, servo_wakeup: Arc<tokio::sync::Notify>, servo: servo::Servo<glue::WindowCallbacks>) -> Self {
         Self {
-            state: UiState::Base, bar_state:BarState::None, strings, browser_id, servo_wakeup, servo, page_display:None, status_display:None,
+            state: UiState::Base, bar_state:BarState::None, strings, browser_id, servo_wakeup, servo, reset_page_text:true, page_display:None, status_display:None,
 
             #[cfg(feature = "debug_mode")]
             debug_display:None
@@ -309,6 +310,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                                         let url = servo::servo_url::ServoUrl::parse(input.value());
 
                                         if let Ok(url) = url {
+                                            app.reset_page_text = true;
                                             app.servo.handle_events(vec![EmbedderEvent::NewWebView(url.clone(), app.browser_id)]);
 
                                             let mut args = FluentArgs::new();
@@ -361,10 +363,18 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                                 page_text += "\n";
                             }
                         }
-                        if page_text.is_empty() {
-                            page_text = naive_fluent(&app.strings, "empty_page");
+                        if app.reset_page_text || app.page_display.is_none() { // Second clause should be impossible
+                            if page_text.is_empty() {
+                                page_text = naive_fluent(&app.strings, "empty_page");
+                            } else {
+                                app.reset_page_text = false;
+                            }
+                            app.page_display = Some(page_text);
+                        } else { // Some sites get multiple passes
+                            if !page_text.is_empty() {
+                                app.page_display = Some(app.page_display.unwrap() + &page_text);
+                            }
                         }
-                        app.page_display = Some(page_text);
                     },
                     EmbedderMsg::ReadyToPresent(_) => { // FIXME: Check IDs?
                         app.status_display = None;
