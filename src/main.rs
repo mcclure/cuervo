@@ -80,6 +80,7 @@ struct App {
     servo_wakeup: Arc<tokio::sync::Notify>,
     servo: servo::Servo<glue::WindowCallbacks>,
     reset_page_text: bool,
+    page_scroll:isize,
     page_display: Option<String>,
     status_display: Option<(StatusStyle, String)>,
 
@@ -90,7 +91,7 @@ struct App {
 impl App {
     const fn new(strings: FluentBundle<FluentResource>, browser_id: servo::TopLevelBrowsingContextId, servo_wakeup: Arc<tokio::sync::Notify>, servo: servo::Servo<glue::WindowCallbacks>) -> Self {
         Self {
-            state: UiState::Base, bar_state:BarState::None, strings, browser_id, servo_wakeup, servo, reset_page_text:true, page_display:None, status_display:None,
+            state: UiState::Base, bar_state:BarState::None, strings, browser_id, servo_wakeup, servo, reset_page_text:true, page_scroll:0, page_display:None, status_display:None,
 
             #[cfg(feature = "debug_mode")]
             debug_display:None
@@ -259,6 +260,8 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                 match &mut app.state {
                     UiState::Base =>
                         if let Event::Key(key @ KeyEvent { code, modifiers, .. }) = ev {
+                            let ctrl = modifiers.intersects(KeyModifiers::CONTROL);
+
                             if key.kind == KeyEventKind::Press {
                                 match key.code {
                                     // Quit
@@ -266,10 +269,24 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                                     // Go to
                                     KeyCode::Char('g') => app.state = UiState::Goto("https://".into()),
 
+                                    KeyCode::Down | KeyCode::Char('j') => app.page_scroll += 1,
+                                    KeyCode::Up | KeyCode::Char('k') => app.page_scroll = (app.page_scroll - 1).max(0),
+
+                                    KeyCode::Char('f') | KeyCode::Char('b') => 
+                                        if ctrl {
+                                            let jump = if let Ok(ratatui::prelude::Size{height,..}) = terminal.size() {
+                                                (height as isize-4).max(1)
+                                            } else {
+                                                8
+                                            };
+                                            let jump = jump * if key.code == KeyCode::Char('f') { 1 } else { -1 };
+                                            app.page_scroll = (app.page_scroll + jump).max(1);
+                                        },
+
                                     // Undocumented: Esc or CTRL-C to clear errors
                                     // TODO: Also clear on scroll
                                     KeyCode::Esc | KeyCode::Char('c') => {
-                                        if key.code != KeyCode::Char('c') || modifiers.intersects(KeyModifiers::CONTROL) {
+                                        if key.code != KeyCode::Char('c') || ctrl {
                                             if let Some((StatusStyle::Error, _)) = app.status_display {
                                                 app.status_display = None;
                                             }
@@ -443,7 +460,8 @@ fn ui(f: &mut Frame, app: &App) {
 
     let intro = Paragraph::new(page_text)
         //.centered()
-        .wrap(Wrap { trim: false });
+        .wrap(Wrap { trim: false })
+        .scroll((app.page_scroll as u16, 0));
 
     f.render_widget(intro, content);
 
