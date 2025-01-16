@@ -239,6 +239,7 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 [[package]]
 name = "background_hang_monitor"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "background_hang_monitor_api",
  "backtrace",
@@ -256,6 +257,7 @@ dependencies = [
 [[package]]
 name = "background_hang_monitor_api"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "base",
  "ipc-channel",
@@ -280,6 +282,7 @@ dependencies = [
 [[package]]
 name = "base"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "crossbeam-channel",
  "ipc-channel",
@@ -397,6 +400,7 @@ dependencies = [
 [[package]]
 name = "bluetooth"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "bitflags 2.7.0",
  "bluetooth_traits",
@@ -412,6 +416,7 @@ dependencies = [
 [[package]]
 name = "bluetooth_traits"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "embedder_traits",
  "ipc-channel",
@@ -503,6 +508,7 @@ dependencies = [
 [[package]]
 name = "canvas"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "app_units",
  "bitflags 2.7.0",
@@ -536,6 +542,7 @@ dependencies = [
 [[package]]
 name = "canvas_traits"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "base",
  "crossbeam-channel",
@@ -727,6 +734,7 @@ dependencies = [
 [[package]]
 name = "compositing"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "base",
  "compositing_traits",
@@ -756,6 +764,7 @@ dependencies = [
 [[package]]
 name = "compositing_traits"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "base",
  "crossbeam-channel",
@@ -784,6 +793,7 @@ dependencies = [
 [[package]]
 name = "constellation"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "background_hang_monitor",
  "background_hang_monitor_api",
@@ -1117,6 +1127,7 @@ checksum = "5c297a1c74b71ae29df00c3e22dd9534821d60eb9af5a0192823fa2acea70c2a"
 [[package]]
 name = "deny_public_fields"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "syn",
  "synstructure",
@@ -1146,6 +1157,7 @@ dependencies = [
 [[package]]
 name = "devtools"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "base",
  "chrono",
@@ -1168,6 +1180,7 @@ dependencies = [
 [[package]]
 name = "devtools_traits"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "base",
  "bitflags 2.7.0",
@@ -1289,6 +1302,7 @@ dependencies = [
 [[package]]
 name = "dom_struct"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "quote",
  "syn",
@@ -1297,6 +1311,7 @@ dependencies = [
 [[package]]
 name = "domobject_derive"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1341,6 +1356,7 @@ checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 [[package]]
 name = "embedder_traits"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "base",
  "cfg-if",
@@ -1613,6 +1629,7 @@ dependencies = [
 [[package]]
 name = "fonts"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "app_units",
  "atomic_refcell",
@@ -1662,6 +1679,7 @@ dependencies = [
 [[package]]
 name = "fonts_traits"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "malloc_size_of_derive",
  "range",
@@ -2374,6 +2392,7 @@ dependencies = [
 [[package]]
 name = "hyper_serde"
 version = "0.13.2"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "cookie 0.18.1",
  "headers 0.4.0",
@@ -3036,6 +3055,7 @@ dependencies = [
 [[package]]
 name = "jstraceable_derive"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "proc-macro2",
  "syn",
@@ -3073,6 +3093,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 [[package]]
 name = "layout_2020"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "app_units",
  "atomic_refcell",
@@ -3118,6 +3139,7 @@ dependencies = [
 [[package]]
 name = "layout_thread_2020"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "app_units",
  "base",
@@ -3213,6 +3235,7 @@ dependencies = [
 [[package]]
 name = "libservo"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "background_hang_monitor",
  "base",
@@ -3402,6 +3425,7 @@ checksum = "2532096657941c2fea9c289d370a250971c689d4f143798ff67113ec042024a5"
 [[package]]
 name = "media"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "euclid",
  "fnv",
@@ -3460,6 +3484,7 @@ dependencies = [
 [[package]]
 name = "metrics"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "base",
  "ipc-channel",
@@ -3599,6 +3624,7 @@ dependencies = [
 [[package]]
 name = "net"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "async-compression",
  "async-recursion",
@@ -3662,6 +3688,7 @@ dependencies = [
 [[package]]
 name = "net_traits"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "base",
  "content-security-policy",
@@ -4074,6 +4101,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 [[package]]
 name = "pixels"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "euclid",
  "image",
@@ -4181,6 +4209,7 @@ dependencies = [
 [[package]]
 name = "profile"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "base",
  "ipc-channel",
@@ -4198,6 +4227,7 @@ dependencies = [
 [[package]]
 name = "profile_traits"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "base",
  "crossbeam-channel",
@@ -4275,6 +4305,7 @@ dependencies = [
 [[package]]
 name = "range"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "malloc_size_of_derive",
  "num-traits",
@@ -4558,6 +4589,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 [[package]]
 name = "script"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -4667,6 +4699,7 @@ dependencies = [
 [[package]]
 name = "script_layout_interface"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "app_units",
  "atomic_refcell",
@@ -4701,6 +4734,7 @@ dependencies = [
 [[package]]
 name = "script_traits"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "background_hang_monitor_api",
  "base",
@@ -4941,6 +4975,7 @@ dependencies = [
 [[package]]
 name = "servo_allocator"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "libc",
  "tikv-jemalloc-sys",
@@ -4969,6 +5004,7 @@ dependencies = [
 [[package]]
 name = "servo_config"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "dirs",
  "embedder_traits",
@@ -4988,6 +5024,7 @@ dependencies = [
 [[package]]
 name = "servo_config_plugins"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "itertools 0.13.0",
  "proc-macro2",
@@ -4998,6 +5035,7 @@ dependencies = [
 [[package]]
 name = "servo_geometry"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "app_units",
  "euclid",
@@ -5009,6 +5047,7 @@ dependencies = [
 [[package]]
 name = "servo_malloc_size_of"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "accountable-refcell",
  "app_units",
@@ -5039,6 +5078,7 @@ dependencies = [
 [[package]]
 name = "servo_rand"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "log",
  "malloc_size_of_derive",
@@ -5052,6 +5092,7 @@ dependencies = [
 [[package]]
 name = "servo_url"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "malloc_size_of_derive",
  "serde",
@@ -5517,6 +5558,7 @@ dependencies = [
 [[package]]
 name = "task_info"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "cc",
 ]
@@ -5686,6 +5728,7 @@ checksum = "06535c958d6abe68dc4b4ef9e6845f758fc42fe463d0093d0aca40254f03fb14"
 [[package]]
 name = "timers"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "base",
  "crossbeam-channel",
@@ -6234,6 +6277,7 @@ dependencies = [
 [[package]]
 name = "webgpu"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "arrayvec",
  "base",
@@ -6325,6 +6369,7 @@ dependencies = [
 [[package]]
 name = "webrender_traits"
 version = "0.0.1"
+source = "git+https://github.com/mcclure/servo?rev=b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a#b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a"
 dependencies = [
  "base",
  "embedder_traits",
