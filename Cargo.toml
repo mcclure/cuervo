@@ -9,6 +9,7 @@ default=["debug_mode"]
 debug_mode=[] # CTRL_SHIFT-D
 
 [dependencies]
+async-io = "2.4.0"
 crossterm = { package = "crossterm", version = "0.28", features=["event-stream"] }
 euclid = "0.22.11"
 fluent = "0.16.1"

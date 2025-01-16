@@ -42,11 +42,9 @@ enum UiState { Base, Goto(Input) }
 
 enum BarState { None, UrlParse(String), UrlLoading }
 
+// FIXME: Overall, debug_mode feels a little heavyweight for a debug feature
 #[cfg(feature = "debug_mode")]
-const DEBUG_DISPLAY_FRESH:std::time::Duration = std::time::Duration::from_millis(800);
-
-#[cfg(feature = "debug_mode")]
-fn debug_display_reset() -> Option<std::time::Instant> { Some(std::time::Instant::now() + DEBUG_DISPLAY_FRESH) }
+const DEBUG_DISPLAY_FRESH:std::time::Duration = std::time::Duration::from_millis(400);
 
 #[cfg(feature = "debug_mode")]
 #[derive(Default)]
@@ -57,14 +55,14 @@ struct DebugMode {
 
 #[cfg(feature = "debug_mode")]
 impl DebugMode {
-    fn reset(&mut self, sleep: &mut std::pin::Pin<&mut tokio::time::Sleep>, multiplier:u32) { // 0 for "never"
+    fn reset(&mut self, timer: &mut async_io::Timer, multiplier:u32) { // 0 for "never"
         if 0 == multiplier {
             self.flip = None;
-            sleep.reset(tokio::time::Instant::far_future());
+            *timer = async_io::Timer::never();
         } else {
-            let time = tokio::time::Instant::now() + DEBUG_DISPLAY_FRESH*multiplier;
+            let time = std::time::Instant::now() + DEBUG_DISPLAY_FRESH*multiplier;
             self.flip = Some(time);
-            sleep.reset(time);
+            *timer = async_io::Timer::at(time);
         }
     }
 }
@@ -241,9 +239,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
     let mut events = crossterm::event::EventStream::new();
     let mut should_quit = false;
 
-    let debug_display_sleep = tokio::time::sleep_until(tokio::time::Instant::far_future());
-    #[cfg(feature = "debug_mode")]
-    tokio::pin!(debug_display_sleep);
+    let mut debug_display_timer = async_io::Timer::never();
 
     while !should_quit {
         // Kick to draw
@@ -267,7 +263,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                                     KeyCode::Char('p') => if modifiers.contains(KeyModifiers::CONTROL) {
                                         app.debug_display = if app.debug_display.is_none() {
                                             let mut d = DebugMode::default();
-                                            d.reset(&mut debug_display_sleep, 2);
+                                            d.reset(&mut debug_display_timer, 2);
                                             d.queue.push_back("Debug display entered (CTRL-P to revert)".to_string()); // Not localized
                                             Some(d)
                                         } else { None };
@@ -307,7 +303,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                 }
             },
             _ = app.servo_wakeup.notified() => {}, // Don't do anything, just wake up
-            _ = &mut debug_display_sleep => {},
+            _ = &mut debug_display_timer => {},
         }
 
         if !should_quit {
@@ -316,10 +312,9 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
             #[cfg(feature = "debug_mode")]
             if let Some(d) = &mut app.debug_display {
                 if let Some(flip) = d.flip {
-                    eprintln!("{flip:?} < {:?}", std::time::Instant::now());
                     if flip < std::time::Instant::now() {
                         d.queue.pop_front();
-                        d.reset(&mut debug_display_sleep, if d.queue.is_empty() { 0 } else { 1 });
+                        d.reset(&mut debug_display_timer, if d.queue.is_empty() { 0 } else { 1 });
                     }
                 }
             }
@@ -347,7 +342,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
 
                 #[cfg(feature = "debug_mode")] // Show every event in debug display
                 if let Some(d) = &mut app.debug_display {
-                    if d.flip.is_none() { d.flip = debug_display_reset(); }
+                    if d.flip.is_none() { d.reset(&mut debug_display_timer, 2); }
                     d.queue.push_back(format!("{event:?}"));
                 }
             }
