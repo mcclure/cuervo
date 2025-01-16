@@ -10,3 +10,10 @@ welcome =
         q: Salir.
 
 empty_page = (No hay contenido.)
+
+# -- Below this line not checked by fluent speakers --
+
+# Personal pronoun bad
+bad_url = No se puede: No comprendo la URL
+
+loading = Cargando: {url}

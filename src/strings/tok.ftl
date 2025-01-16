@@ -12,3 +12,9 @@ welcome =
         q: tawa weka.
 
 empty_page = (ijo li lon ala.)
+
+loading = kama: {url}
+
+# -- Below this line not checked by fluent speakers --
+
+bad_url = open li ken ala: URL li pakala

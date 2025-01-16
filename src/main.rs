@@ -17,7 +17,7 @@ use ratatui::{
         terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     },
     layout::{Constraint, Layout, Rect},
-    style::Stylize,
+    style::{Color, Modifier, Style, Stylize},
     widgets::{Block, Clear, Paragraph, Wrap},
     Frame, Terminal,
 };
@@ -67,6 +67,11 @@ impl DebugMode {
     }
 }
 
+enum StatusStyle {
+    Info,
+    Error
+}
+
 struct App {
     state: UiState,
     bar_state: BarState,
@@ -75,6 +80,8 @@ struct App {
     servo_wakeup: Arc<tokio::sync::Notify>,
     servo: servo::Servo<glue::WindowCallbacks>,
     page_display: Option<String>,
+    status_display: Option<(StatusStyle, String)>,
+
     #[cfg(feature = "debug_mode")]
     debug_display: Option<DebugMode>, // If non-None do debug
 }
@@ -82,7 +89,7 @@ struct App {
 impl App {
     const fn new(strings: FluentBundle<FluentResource>, browser_id: servo::TopLevelBrowsingContextId, servo_wakeup: Arc<tokio::sync::Notify>, servo: servo::Servo<glue::WindowCallbacks>) -> Self {
         Self {
-            state: UiState::Base, bar_state:BarState::None, strings, browser_id, servo_wakeup, servo, page_display:None,
+            state: UiState::Base, bar_state:BarState::None, strings, browser_id, servo_wakeup, servo, page_display:None, status_display:None,
 
             #[cfg(feature = "debug_mode")]
             debug_display:None
@@ -258,6 +265,16 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                                     // Go to
                                     KeyCode::Char('g') => app.state = UiState::Goto("https://".into()),
 
+                                    // Undocumented: Esc or CTRL-C to clear errors
+                                    // TODO: Also clear on scroll
+                                    KeyCode::Esc | KeyCode::Char('c') => {
+                                        if key.code != KeyCode::Char('c') || modifiers.intersects(KeyModifiers::CONTROL) {
+                                            if let Some((StatusStyle::Error, _)) = app.status_display {
+                                                app.status_display = None;
+                                            }
+                                        }
+                                    }
+
                                     // Debug mode?!
                                     #[cfg(feature = "debug_mode")]
                                     KeyCode::Char('p') => if modifiers.contains(KeyModifiers::CONTROL) {
@@ -289,9 +306,21 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                                 if done {
                                     if accept {
                                         // FIXME save the url // FIXME handle bad url // FIXME reuse views
-                                        let url = servo::servo_url::ServoUrl::parse(input.value()).expect("Not a real url");
+                                        let url = servo::servo_url::ServoUrl::parse(input.value());
 
-                                        app.servo.handle_events(vec![EmbedderEvent::NewWebView(url, app.browser_id)]);
+                                        if let Ok(url) = url {
+                                            app.servo.handle_events(vec![EmbedderEvent::NewWebView(url.clone(), app.browser_id)]);
+
+                                            let mut args = FluentArgs::new();
+                                            if let Some(host) = url.host() {
+                                                args.set("url_slug", host.to_string());
+                                            } else {
+                                                args.set("url_slug", "(unknown)");
+                                            }
+                                            app.status_display = Some((StatusStyle::Info, naive_fluent_args(&app.strings, "loading", args)))
+                                        } else {
+                                            app.status_display = Some((StatusStyle::Error, naive_fluent(&app.strings, "bad_url")))
+                                        }
                                     }
 
                                     app.state = UiState::Base;
@@ -337,6 +366,9 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                         }
                         app.page_display = Some(page_text);
                     },
+                    EmbedderMsg::ReadyToPresent(_) => { // FIXME: Check IDs?
+                        app.status_display = None;
+                    },
                     _=>()
                 }
 
@@ -373,6 +405,15 @@ fn naive_fluent(strings: &FluentBundle<FluentResource>, key:&str) -> String {
     strings.format_pattern(
         strings.get_message(key).unwrap().value().unwrap(),
         None,
+        &mut trash
+    ).to_string() // FIXME: Consider panic if trash full
+}
+
+fn naive_fluent_args(strings: &FluentBundle<FluentResource>, key:&str, args:FluentArgs) -> String {
+    let mut trash:Vec<FluentError> = Default::default();
+    strings.format_pattern(
+        strings.get_message(key).unwrap().value().unwrap(),
+        Some(&args),
         &mut trash
     ).to_string()
 }
@@ -423,6 +464,18 @@ fn ui(f: &mut Frame, app: &App) {
             ))
     }
 
+    if let Some((style, text)) = &app.status_display {
+        let bar = Paragraph::new(text.clone());
+        let bar = bar.style(match style {
+            StatusStyle::Error => Style::default().fg(Color::LightRed).add_modifier(Modifier::REVERSED),
+            _ => Style::default().add_modifier(Modifier::REVERSED),
+        });
+        let mut area = content;
+        area.y = area.height-1;
+        area.height=1;
+        f.render_widget(bar, area);
+    }
+
     #[cfg(feature = "debug_mode")]
     if let Some(d) = &app.debug_display {
         if let Some(text) = d.queue.front() {
@@ -430,6 +483,9 @@ fn ui(f: &mut Frame, app: &App) {
             let bar = Paragraph::new(text.clone());
             let mut area = content;
             area.y = area.height-1;
+            if app.status_display.is_some() {
+                area.y -= 1;
+            }
             area.height=1;
             f.render_widget(bar, area);
         }
