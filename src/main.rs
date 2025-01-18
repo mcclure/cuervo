@@ -26,6 +26,7 @@ use fluent::{FluentBundle, FluentValue, FluentResource, FluentArgs, FluentError}
 use unic_langid::LanguageIdentifier;
 
 use servo::base::id::WebViewId;
+use servo::config::{opts, prefs::Preferences};
 use servo::compositing::windowing::{EmbedderEvent, EmbedderMethods};
 use servo::embedder_traits::{EventLoopWaker, EmbedderMsg, EmbedderProxy};
 use servo::servo_url::ServoUrl;
@@ -217,6 +218,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let cuervo_version = cuervo_version_iter.next().unwrap().to_uppercase().collect::<String>()+cuervo_version_iter.as_str();
 
         let servo = servo::Servo::new(
+            opts::default_opts(),
+            Preferences::default(),
             rendering_context,
             embed_handler,
             Rc::new(window),

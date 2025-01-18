@@ -15,10 +15,10 @@ euclid = "0.22.11"
 fluent = "0.16.1"
 futures = "0.3.30"
 # 2024-09-12 top of tree
-libservo = { git = "https://github.com/mcclure/servo", rev = "b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a" }
+libservo = { git = "https://github.com/mcclure/servo", rev = "e7d087bcddfcfe462433f818965c784a7f3ee2af" }
 ratatui = { version = "0.28.0", features=["crossterm"] }
 rustls = { version = "0.23", default-features = false, features = ["logging", "std", "tls12", "ring"] }
-servo_net = { git = "https://github.com/mcclure/servo", rev = "b8d23af3bee2555d29d33b6bfbf4bac20b9ae78a", package="net" }
+servo_net = { git = "https://github.com/mcclure/servo", rev = "e7d087bcddfcfe462433f818965c784a7f3ee2af", package="net" }
 servo_webxr = { git = "https://github.com/servo/webxr", package="webxr" }
 surfman = { git = "https://github.com/servo/surfman", rev = "300789ddbda45c89e9165c31118bf1c4c07f89f6", features = ["chains"] }
 sys-locale = "0.3.1"
