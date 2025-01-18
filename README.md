@@ -1,5 +1,7 @@
 This is command-line frontend for the [servo](https://servo.org) web browser. You can look at web pages in a terminal.
 
+This is an early prototype with known problems.
+
 ## BUILDING
 
 This software is known to work on Debian "Trixie" built with Rust 1.86-nightly.
