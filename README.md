@@ -1,19 +1,12 @@
-This is command-line frontend for the [servo](https://servo.org) web browser. You can look at web pages in a terminal.
+This is command-line frontend for the [Servo](https://servo.org) web browser. You can look at web pages in a terminal. This is an early prototype with known problems.
 
-This is an early prototype with known problems.
+Cuervo can currently run in English, Spanish, Polish and Toki Pona.
 
 ## BUILDING
 
-This software is known to work on Debian "Trixie" built with Rust 1.86-nightly.
+This software is known to work on Debian "Trixie" built with Rust 1.83.
 
-To build this you **must** create a file `.cargo/config.toml` in the repo and insert:
-
-	[env]
-	RUSTC_BOOTSTRAP = "crown,script,style_tests"
-
-You also **must** build with Rust Nightly. It doesn't much matter what version of Nightly you use, but it has to be Nightly.
-
-This software requires certain C software packages to be present on the system to build. In my case, I had to install the Debian packages `libunwind-dev`, `libfontconfig1-dev`, `python3-packaging` and a C compiler.
+This software requires certain C software packages to be present on the system to build. In my case, I had to install the Debian packages `libunwind-dev`, `libfontconfig1-dev`, and a C compiler.
 
 ### LICENSE
 
@@ -37,9 +30,6 @@ This software uses a custom fork of Servo. Although the correct fork will be dow
 	[patch.'https://github.com/mcclure/servo']
 	libservo = { path = '../other/servo/components/servo' }
 	servo_net = { path = '../other/servo/components/net', package="net" }
-
-	[env]
-	RUSTC_BOOTSTRAP = "crown,script,style_tests"
 
 When building this way, anytime you commit to your servo checkout, you must manually record it by updating the git hashes for `libservo` and `servo_net` in `Cargo.toml`.
 
